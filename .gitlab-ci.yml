@@ -1,0 +1,44 @@
+---
+# Build the devcontainer image with Buildah and push it to the GitLab
+# Container Registry of this project ($CI_REGISTRY_IMAGE).
+
+stages:
+  - build
+
+build-image:
+  stage: build
+  image: quay.io/buildah/stable
+  variables:
+    # Rootless-friendly settings for Buildah inside a CI container
+    STORAGE_DRIVER: vfs
+    BUILDAH_ISOLATION: chroot
+    BUILDAH_FORMAT: docker
+  before_script:
+    - buildah login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+  script:
+    - |
+      echo "🔨 Building $CI_REGISTRY_IMAGE"
+      TAGS="-t $CI_REGISTRY_IMAGE:latest -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        TAGS="$TAGS -t $CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
+      fi
+      buildah bud --layers -f Containerfile $TAGS .
+    - |
+      echo "📦 Pushing tags"
+      buildah push "$CI_REGISTRY_IMAGE:latest"
+      buildah push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        buildah push "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
+      fi
+      echo "✅ Image published"
+  rules:
+    # Versioned release: build on git tags
+    - if: $CI_COMMIT_TAG
+    # Default branch: rebuild only when the image definition changes
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - Containerfile
+        - init.sh
+    # Manual trigger from the GitLab UI (force rebuild)
+    - if: $CI_PIPELINE_SOURCE == "web"
+      when: manual

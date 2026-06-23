@@ -51,6 +51,19 @@ Outils système : `git`, `curl`, `jq`, `gnupg2`, `unzip`/`tar`/`xz`, `gcc`,
 podman build -t ghcr.io/stackopshq/infrastructure/devcontainer:latest -f Containerfile .
 ```
 
+## 🚀 CI/CD (GitLab)
+
+`.gitlab-ci.yml` construit l'image avec **Buildah** et la pousse dans la
+**Container Registry** du projet (`$CI_REGISTRY_IMAGE`).
+
+Déclencheurs :
+
+- Push sur la branche par défaut **si** `Containerfile` ou `init.sh` changent.
+- Tag git → image taggée avec le tag (release versionnée).
+- Déclenchement manuel depuis l'UI GitLab (rebuild forcé).
+
+Tags publiés : `:latest`, `:<short-sha>`, et `:<git-tag>` sur les tags git.
+
 ## ➕ Ajouter un outil
 
 1. Ajouter une fonction `install_*()` dans `init.sh` (avec un commentaire
