@@ -30,17 +30,20 @@ build-image:
       export HTTP_PROXY="$(sanitize "${HTTP_PROXY:-$http_proxy}")"  http_proxy="$HTTP_PROXY"
       export HTTPS_PROXY="$(sanitize "${HTTPS_PROXY:-$https_proxy}")" https_proxy="$HTTPS_PROXY"
       echo "🌐 Proxy configured: ${HTTPS_PROXY:+yes} | no_proxy: ${no_proxy}"
-    # The internal registry uses a private CA. Fetch the chain it presents and
-    # add it to the trust store so HTTPS verification succeeds (no insecure mode).
-    - command -v openssl >/dev/null || dnf install -y --setopt=install_weak_deps=False openssl
+    # The internal registry uses a private CA. Preferred: provide the CA via the
+    # REGISTRY_CA_PEM CI/CD variable. Fallback: grab the chain the server presents.
     - |
-      host="${CI_REGISTRY%%:*}"
-      port="${CI_REGISTRY##*:}"
-      [ "$host" = "$port" ] && port=443
-      echo "🔐 Trusting CA presented by ${host}:${port}"
-      openssl s_client -connect "${host}:${port}" -servername "$host" -showcerts </dev/null 2>/dev/null \
-        | awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' \
-        > /etc/pki/ca-trust/source/anchors/gitlab-registry.crt
+      ANCHOR=/etc/pki/ca-trust/source/anchors/registry-ca.crt
+      if [ -n "$REGISTRY_CA_PEM" ]; then
+        echo "🔐 Installing CA from REGISTRY_CA_PEM"
+        printf '%s\n' "$REGISTRY_CA_PEM" > "$ANCHOR"
+      else
+        echo "⚠️ REGISTRY_CA_PEM not set — falling back to fetching the presented chain"
+        command -v openssl >/dev/null || dnf install -y --setopt=install_weak_deps=False openssl
+        host="${CI_REGISTRY%%:*}"; port="${CI_REGISTRY##*:}"; [ "$host" = "$port" ] && port=443
+        openssl s_client -connect "${host}:${port}" -servername "$host" -showcerts </dev/null 2>/dev/null \
+          | awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' > "$ANCHOR"
+      fi
       update-ca-trust
     - buildah login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
   script:
