@@ -43,12 +43,15 @@ MOLECULE_VERSION=26.4.0
 
 log() { echo -e "\n=== $* ==="; }
 
+# Keep installs lean: no docs/man, no weak (recommended) dependencies.
+DNF_OPTS="--setopt=install_weak_deps=False --setopt=tsflags=nodocs"
+
 install_system_deps() {
   log "Installing base system dependencies"
-  dnf update -y -q
-  dnf install -y dnf-plugins-core
+  dnf update -y -q $DNF_OPTS
+  dnf install -y $DNF_OPTS dnf-plugins-core
   dnf config-manager --enable crb
-  dnf install -y \
+  dnf install -y $DNF_OPTS \
     ca-certificates \
     sudo \
     curl \
@@ -73,7 +76,7 @@ install_nodejs() {
   curl --silent --fail -Lo /tmp/nodesource_setup.sh \
     "https://rpm.nodesource.com/setup_${NODE_MAJOR}.x"
   bash /tmp/nodesource_setup.sh
-  dnf install -y nodejs
+  dnf install -y $DNF_OPTS nodejs
   rm -f /tmp/nodesource_setup.sh
   node --version
 }
@@ -224,6 +227,44 @@ create_user() {
   chown -R "$USER_UID":"$USER_GID" "${USER_HOME}"
 }
 
+compress_binaries() {
+  # renovate: datasource=github-releases depName=upx/upx
+  local UPX_VERSION=5.0.2
+  log "Compressing large binaries with UPX ${UPX_VERSION}"
+  curl -sSfL -o /tmp/upx.tar.xz \
+    "https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-amd64_linux.tar.xz"
+  mkdir -p /tmp/upx
+  tar -xJf /tmp/upx.tar.xz -C /tmp/upx --strip-components=1
+  local upx=/tmp/upx/upx
+  # Only the large standalone Go/Rust CLIs — not node/python interpreters.
+  for path in \
+    /usr/local/bin/vault \
+    /usr/local/bin/terraform \
+    /usr/local/bin/flux \
+    /usr/local/bin/helm \
+    /usr/local/bin/kubectl \
+    /usr/local/bin/task \
+    /usr/local/bin/kustomize \
+    /usr/local/bin/terraform-docs \
+    /usr/local/bin/uv \
+    /opt/opentofu/tofu; do
+    [ -f "$path" ] || continue
+    echo "UPX: $path"
+    # -1 (fast): near-identical ratio to --best on Go binaries, but seconds
+    # instead of many minutes on the ~0.5 GB vault binary.
+    "$upx" -1 --no-progress "$path" 2>/dev/null || echo "  (skipped: not compressible)"
+  done
+  rm -rf /tmp/upx /tmp/upx.tar.xz
+}
+
+slim_down() {
+  # Build toolchain (gcc, *-devel) is intentionally kept so `uv sync` can
+  # compile Python extensions inside the container. Only strip docs/locales.
+  log "Removing documentation and locales"
+  rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/* \
+         /usr/share/locale/* /usr/share/i18n/locales/* 2>/dev/null || true
+}
+
 setup_completions() {
   log "Configuring shell completions"
   local dir=/etc/bash_completion.d
@@ -252,6 +293,8 @@ main() {
   install_ansible
   setup_completions
   create_user
+  compress_binaries
+  slim_down
 
   log "Cleaning up"
   dnf clean all
