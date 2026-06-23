@@ -38,11 +38,24 @@ build-image:
         echo "🔐 Installing CA from REGISTRY_CA_PEM"
         printf '%s\n' "$REGISTRY_CA_PEM" > "$ANCHOR"
       else
-        echo "⚠️ REGISTRY_CA_PEM not set — falling back to fetching the presented chain"
+        # The registry serves a public cert (Thawte/DigiCert) but omits the
+        # intermediate. Capture what it sends, then follow the leaf's AIA
+        # "CA Issuers" link to fetch the missing intermediate so Go can build
+        # the chain up to the DigiCert root already shipped in the container.
         command -v openssl >/dev/null || dnf install -y --setopt=install_weak_deps=False openssl
         host="${CI_REGISTRY%%:*}"; port="${CI_REGISTRY##*:}"; [ "$host" = "$port" ] && port=443
+        echo "🔐 Building trust chain for ${host}:${port}"
         openssl s_client -connect "${host}:${port}" -servername "$host" -showcerts </dev/null 2>/dev/null \
           | awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' > "$ANCHOR"
+        aia=$(openssl x509 -in "$ANCHOR" -noout -text 2>/dev/null \
+          | awk '/CA Issuers/{print}' | grep -oE 'https?://[^ ]+' | head -n1)
+        if [ -n "$aia" ]; then
+          echo "↪︎ Fetching intermediate from ${aia}"
+          curl -fsSL "$aia" -o /tmp/issuer.crt || true
+          openssl x509 -inform DER -in /tmp/issuer.crt -out /tmp/issuer.pem 2>/dev/null \
+            || openssl x509 -inform PEM -in /tmp/issuer.crt -out /tmp/issuer.pem 2>/dev/null || true
+          [ -s /tmp/issuer.pem ] && cat /tmp/issuer.pem >> "$ANCHOR"
+        fi
       fi
       update-ca-trust
     - buildah login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
