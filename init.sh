@@ -73,6 +73,14 @@ install_system_deps() {
     python3-pip
 }
 
+install_python_libs() {
+  log "Pre-installing common Python libraries (system python3)"
+  # Pre-seeded so consumer CI jobs don't pip-install them on every run.
+  # --break-system-packages: Rocky 10 marks the env externally-managed (PEP 668).
+  python3 -m pip install --break-system-packages --no-cache-dir \
+    pyyaml requests urllib3
+}
+
 install_nodejs() {
   log "Installing Node.js ${NODE_MAJOR}"
   curl --silent --fail -Lo /tmp/nodesource_setup.sh \
@@ -281,6 +289,7 @@ setup_completions() {
 
 main() {
   install_system_deps
+  install_python_libs
   install_nodejs
   install_task
   install_flux
