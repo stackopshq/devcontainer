@@ -9,7 +9,9 @@ RUN chmod +x /.devcontainer/init.sh \
     && /.devcontainer/init.sh \
     && rm -rf /.devcontainer
 
-USER devops
+# Image runs as root by default (needed by GitLab CI jobs that write across the
+# shared build tree). VS Code uses the unprivileged `devops` user via the
+# "containerUser" setting in devcontainer.json.
 WORKDIR /workspaces/infrastructure
 
 CMD ["sleep", "infinity"]

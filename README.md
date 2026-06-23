@@ -32,8 +32,10 @@ Outils système : `git`, `curl`, `jq`, `gnupg2`, `unzip`/`tar`/`xz`, `gcc`,
 
 ## 👤 Utilisateur
 
-- **Nom** : `devops` — **UID/GID** : `1000/1000`
-- **Sudo** : sans mot de passe
+- **Par défaut** : `root` — requis par les jobs CI GitLab qui écrivent dans
+  l'arbre de build partagé (`/builds/...`).
+- **VS Code Dev Container** : `devops` (UID/GID `1000/1000`, sudo sans mot de
+  passe) via `"containerUser"` dans `devcontainer.json`.
 
 ## 📁 Structure
 
