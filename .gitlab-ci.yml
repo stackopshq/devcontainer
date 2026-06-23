@@ -21,9 +21,15 @@ build-image:
     # Normalize proxy variables (tools read either case); buildah bud propagates
     # these into the build automatically (--http-proxy is on by default).
     - |
-      export http_proxy="${http_proxy:-$HTTP_PROXY}" HTTP_PROXY="${HTTP_PROXY:-$http_proxy}"
-      export https_proxy="${https_proxy:-$HTTPS_PROXY}" HTTPS_PROXY="${HTTPS_PROXY:-$https_proxy}"
-      echo "🌐 Proxy: ${HTTPS_PROXY:-<none>} | no_proxy: ${no_proxy}"
+      # CI/CD variables may carry stray whitespace/newlines or omit the scheme.
+      sanitize() {
+        v="$(printf '%s' "$1" | tr -d '[:space:]')"
+        case "$v" in ""|http://*|https://*) ;; *) v="http://$v" ;; esac
+        printf '%s' "$v"
+      }
+      export HTTP_PROXY="$(sanitize "${HTTP_PROXY:-$http_proxy}")"  http_proxy="$HTTP_PROXY"
+      export HTTPS_PROXY="$(sanitize "${HTTPS_PROXY:-$https_proxy}")" https_proxy="$HTTPS_PROXY"
+      echo "🌐 Proxy configured: ${HTTPS_PROXY:+yes} | no_proxy: ${no_proxy}"
     # The internal registry uses a private CA. Fetch the chain it presents and
     # add it to the trust store so HTTPS verification succeeds (no insecure mode).
     - command -v openssl >/dev/null || dnf install -y --setopt=install_weak_deps=False openssl
