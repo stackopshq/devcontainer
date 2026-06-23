@@ -16,6 +16,7 @@ build-image:
   before_script:
     # The internal registry uses a private CA. Fetch the chain it presents and
     # add it to the trust store so HTTPS verification succeeds (no insecure mode).
+    - command -v openssl >/dev/null || dnf install -y --setopt=install_weak_deps=False openssl
     - |
       host="${CI_REGISTRY%%:*}"
       port="${CI_REGISTRY##*:}"
