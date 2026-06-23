@@ -14,8 +14,18 @@ build-image:
     BUILDAH_ISOLATION: chroot
     BUILDAH_FORMAT: docker
   before_script:
-    # Internal registry uses a private CA → skip TLS verification for login/push
-    - buildah login --tls-verify=false -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    # The internal registry uses a private CA. Fetch the chain it presents and
+    # add it to the trust store so HTTPS verification succeeds (no insecure mode).
+    - |
+      host="${CI_REGISTRY%%:*}"
+      port="${CI_REGISTRY##*:}"
+      [ "$host" = "$port" ] && port=443
+      echo "🔐 Trusting CA presented by ${host}:${port}"
+      openssl s_client -connect "${host}:${port}" -servername "$host" -showcerts </dev/null 2>/dev/null \
+        | awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' \
+        > /etc/pki/ca-trust/source/anchors/gitlab-registry.crt
+      update-ca-trust
+    - buildah login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
   script:
     - |
       echo "🔨 Building $CI_REGISTRY_IMAGE"
@@ -26,10 +36,10 @@ build-image:
       buildah bud --layers -f Containerfile $TAGS .
     - |
       echo "📦 Pushing tags"
-      buildah push --tls-verify=false "$CI_REGISTRY_IMAGE:latest"
-      buildah push --tls-verify=false "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+      buildah push "$CI_REGISTRY_IMAGE:latest"
+      buildah push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
       if [ -n "$CI_COMMIT_TAG" ]; then
-        buildah push --tls-verify=false "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
+        buildah push "$CI_REGISTRY_IMAGE:$CI_COMMIT_TAG"
       fi
       echo "✅ Image published"
   rules:
