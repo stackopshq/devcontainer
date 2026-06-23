@@ -2,7 +2,7 @@
 
 Image de développement pour l'Infrastructure as Code (IaC) du monorepo `infrastructure`.
 Construite sur **Rocky Linux 10 (UBI)** et publiée sur
-`registry.cheopsnet.ch/infrastructure/infrastructure/deployment/devcontainer:latest`.
+`registry.cheopsnet.ch:443/infrastructure/infrastructure/deployment/devcontainer:latest`.
 
 ## 🧰 Outils installés
 
@@ -48,7 +48,7 @@ Outils système : `git`, `curl`, `jq`, `gnupg2`, `unzip`/`tar`/`xz`, `gcc`,
 ## 🔨 Build local
 
 ```bash
-podman build -t registry.cheopsnet.ch/infrastructure/infrastructure/deployment/devcontainer:latest -f Containerfile .
+podman build -t registry.cheopsnet.ch:443/infrastructure/infrastructure/deployment/devcontainer:latest -f Containerfile .
 ```
 
 ## 🚀 CI/CD (GitLab)

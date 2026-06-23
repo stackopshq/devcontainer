@@ -1,6 +1,6 @@
 {
   "name": "Infrastructure Development Container",
-  "image": "registry.cheopsnet.ch/infrastructure/infrastructure/deployment/devcontainer:latest",
+  "image": "registry.cheopsnet.ch:443/infrastructure/infrastructure/deployment/devcontainer:latest",
   "runArgs": ["--network=host"],
   "customizations": {
     "vscode": {
