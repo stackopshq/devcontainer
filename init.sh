@@ -68,7 +68,9 @@ install_system_deps() {
     gcc \
     vim-minimal \
     jq \
-    bash-completion
+    bash-completion \
+    python3 \
+    python3-pip
 }
 
 install_nodejs() {
