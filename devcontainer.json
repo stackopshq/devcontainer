@@ -1,6 +1,6 @@
 {
   "name": "Infrastructure Development Container",
-  "image": "ghcr.io/stackopshq/infrastructure/devcontainer:latest",
+  "image": "registry.cheopsnet.ch/infrastructure/infrastructure/deployment/devcontainer:latest",
   "runArgs": ["--network=host"],
   "customizations": {
     "vscode": {
