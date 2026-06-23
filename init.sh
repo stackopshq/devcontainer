@@ -71,6 +71,9 @@ install_system_deps() {
     bash-completion \
     python3 \
     python3-pip
+  # Avoid git "dubious ownership" errors when build dirs are owned by another
+  # UID than the container user (common with the GitLab Docker executor).
+  git config --system --add safe.directory '*'
 }
 
 install_python_libs() {
