@@ -2,7 +2,7 @@
 
 Image de développement pour l'Infrastructure as Code (IaC) du monorepo `infrastructure`.
 Construite sur **Rocky Linux 10 (UBI)** et publiée sur
-`registry.cheopsnet.ch:443/infrastructure/infrastructure/deployment/devcontainer:latest`.
+`ghcr.io/stackopshq/devcontainer:latest`.
 
 ## 🧰 Outils installés
 
@@ -39,30 +39,40 @@ Outils système : `git`, `curl`, `jq`, `gnupg2`, `unzip`/`tar`/`xz`, `gcc`,
 
 ```
 .
-├── Containerfile       # Définition de l'image
-├── init.sh             # Script d'installation des outils
-├── devcontainer.json   # Configuration VS Code Dev Containers
+├── Containerfile                       # Définition de l'image
+├── init.sh                             # Script d'installation des outils
+├── devcontainer.json                   # Configuration VS Code Dev Containers
+├── .github/workflows/                  # CI GitHub Actions (build + push GHCR)
 └── README.md
 ```
 
 ## 🔨 Build local
 
 ```bash
-podman build -t registry.cheopsnet.ch:443/infrastructure/infrastructure/deployment/devcontainer:latest -f Containerfile .
+podman build -t ghcr.io/stackopshq/devcontainer:latest -f Containerfile .
 ```
 
-## 🚀 CI/CD (GitLab)
+## 🚀 CI/CD (GitHub Actions)
 
-`.gitlab-ci.yml` construit l'image avec **Buildah** et la pousse dans la
-**Container Registry** du projet (`$CI_REGISTRY_IMAGE`).
+`.github/workflows/build-devcontainer.yml` construit l'image et la pousse sur
+**GHCR** (`ghcr.io/${{ github.repository }}`).
 
 Déclencheurs :
 
-- Push sur la branche par défaut **si** `Containerfile` ou `init.sh` changent.
-- Tag git → image taggée avec le tag (release versionnée).
-- Déclenchement manuel depuis l'UI GitLab (rebuild forcé).
+- Push sur `main`/`master` **si** `Containerfile`/`init.sh`/le workflow changent.
+- Tag git `v*` → image taggée avec le tag (release versionnée).
+- Déclenchement manuel (`workflow_dispatch`).
 
-Tags publiés : `:latest`, `:<short-sha>`, et `:<git-tag>` sur les tags git.
+Tags publiés : `:latest`, `:sha-<short>`, et `:<git-tag>` sur les tags git.
+
+## 📥 Pull de l'image
+
+```bash
+podman pull ghcr.io/stackopshq/devcontainer:latest
+```
+
+> Si le package GHCR est privé : `podman login ghcr.io` avec un PAT GitHub
+> disposant du scope `read:packages`.
 
 ## ➕ Ajouter un outil
 
