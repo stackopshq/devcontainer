@@ -1,0 +1,9 @@
+# Local build / scratch
+*.log
+*.tmp
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

@@ -1,0 +1,48 @@
+{
+  "name": "Infrastructure Development Container",
+  "image": "ghcr.io/stackopshq/infrastructure/devcontainer:latest",
+  "runArgs": ["--network=host"],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "signageos.signageos-vscode-sops",
+        "redhat.ansible",
+        "redhat.vscode-yaml",
+        "aaron-bond.better-comments",
+        "samuelcolvin.jinjahtml",
+        "dzhavat.bracket-pair-toggler",
+        "fabiospampinato.vscode-diff",
+        "shardulm94.trailing-spaces",
+        "4ops.terraform",
+        "mrmlnc.vscode-json5",
+        "esbenp.prettier-vscode",
+        "oderwat.indent-rainbow",
+        "hashicorp.terraform",
+        "hashicorp.hcl",
+        "jlcs-es.x509-parser",
+        "bpruitt-goddard.mermaid-markdown-syntax-highlighting",
+        "bierner.markdown-mermaid",
+        "eamodio.gitlens",
+        "weaveworks.vscode-gitops-tools",
+        "SanjulaGanepola.github-local-actions",
+        "tamasfe.even-better-toml"
+      ]
+    }
+  },
+  "privileged": true,
+  "containerUser": "devops",
+  "containerEnv": {
+    "USER": "devops",
+    "SSH_AUTH_SOCK": "${localEnv:SSH_AUTH_SOCK}",
+    "KUBECONFIG": "/home/devops/.kube/config",
+    "VAULT_TOKEN": "${localEnv:VAULT_TOKEN}",
+    "VAULT_ADDR": "${localEnv:VAULT_ADDR}",
+    "LC_ALL": "C.UTF-8"
+  },
+  "mounts": [
+    "source=/etc/ssl/certs/ca-bundle.crt,target=/etc/ssl/certs/ca-bundle.crt,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.ssh,target=/home/devops/.ssh,type=bind,consistency=cached"
+  ]
+}
